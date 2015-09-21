@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">    <title>Orcid to VIVO</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="page-header">
+      <h1>VIVO to Not LD service <small>proof of concept</small></h1>
+      <small>Code available at <a href="https://github.com/gwu-libraries/vivo2notld">https://github.com/gwu-libraries/vivo2notld</a>.</small>
+    </div>
+
+    {% if output %}
+        <h2>Serialized to {{ format }}</h2>
+        <pre class="pre-scrollable">{{ output }}</pre>
+    {% endif %}
+
+    {% if obj %}
+        <h2>Python object</h2>
+        <pre class="pre-scrollable">{{ obj }}</pre>
+    {% endif %}
+
+    {% if graph %}
+        <h2>Graph</h2>
+        <pre class="pre-scrollable">{{ graph }}</pre>
+    {% endif %}
+
+    {% if query %}
+        <h2>Query</h2>
+        <pre class="pre-scrollable">{{ query }}</pre>
+    {% endif %}
+
+    <form class="form-horizontal" action="{{ url_for('crosswalk') }}" method="POST">
+        <div class="form-group">
+            <label for="definition" class="col-sm-2 control-label">Definition:</label>
+            <div class="col-sm-4">
+                <select class="form-control" name="definition" id="definition">
+                    {% for definition_id, definition_name in definitions.items() %}
+                        <option value="{{ definition_id }}" {% if definition == definition_id %} selected {% endif %}>{{ definition_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="subject_namespace" class="col-sm-2 control-label">Subject namespace:</label>
+            <div class="col-sm-6">
+                <input type="text" class="form-control" id="subject_namespace" name="subject_namespace" value="{{ subject_namespace if subject_namespace != None }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="subject_identifier" class="col-sm-2 control-label">Subject identifier:</label>
+            <div class="col-sm-6">
+                <input type="text" class="form-control" id="subject_identifier" name="subject_identifier" value="{{ subject_identifier if subject_identifier != None }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="endpoint" class="col-sm-2 control-label">SPARQL Query endpoint:</label>
+            <div class="col-sm-6">
+                <input type="url" class="form-control" id="endpoint" name="endpoint" value="{{ endpoint if endpoint != None }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="username" class="col-sm-2 control-label">Username:</label>
+            <div class="col-sm-6">
+                <input type="text" class="form-control" id="username" name="username" value="{{ username if username != None }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="password" class="col-sm-2 control-label">Password:</label>
+            <div class="col-sm-6">
+                <input type="text" class="form-control" id="password" name="password" value="{{ password if password != None }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="format" class="col-sm-2 control-label">Format:</label>
+            <div class="col-sm-4">
+                <select class="form-control" name="format" id="format">
+                    <option value="xml" {% if format == 'xml' %} selected {% endif %}>xml</option>
+                    <option value="json" {% if format == 'json' %} selected {% endif %}>json</option>
+                    <option value="yaml" {% if format == 'yaml' %} selected {% endif %}>yaml</option>
+                </select>
+            </div>
+        </div>
+        <div class="checkbox col-sm-offset-2">
+            <label>
+                <input type="checkbox" name="output_html" {% if output_html %} checked {% endif %}>Output as html.
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <div class="col-sm-offset-2">
+                <button type="submit" class="btn btn-default">Submit</button>
+            </div>
+        </div>
+
+    </form>
+</div>
+</body>
+</html>
