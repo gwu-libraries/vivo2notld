@@ -1,5 +1,7 @@
 # VIVO2NotLD (not Linked Data)
 
+[![Build status](https://travis-ci.org/gwu-libraries/vivo2notld.svg)]
+
 VIVO2NotLD provides tools to convert RDF that conforms to the VIVO-ISF Ontology
 to a more simplified form encoded in JSON, XML, YAML, or other.
 
@@ -9,6 +11,10 @@ by other applications.  In particular, it lowers the barrier to re-use of VIVO d
 * structuring the data in a less complex way that does not require understanding
    VIVO-ISF ontology.
 * does not require understanding RDF, SPARQL, or other semantic web technologies.
+
+
+Try it at http://gw-orcid2vivo.wrlc.org/vivo2notld
+
 
 ## Commandline
 
