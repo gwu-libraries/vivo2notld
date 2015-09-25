@@ -1,5 +1,5 @@
 from unittest import TestCase
-from vivo2notld.sparql_query import _format_query, generate_sparql_construct
+from vivo2notld.sparql_query import _format_query, generate_sparql_construct, generate_sparql_list_construct
 
 
 class TestSparqlQuery(TestCase):
@@ -275,3 +275,150 @@ WHERE
     }
 }"""
         self.assertEqual(formatted_query, _format_query(query, 4))
+
+    def test_list_definition(self):
+        definition = {
+            "list_definition": {
+                "where": "?subj a foaf:Person .",
+                "fields": {
+                    "name": {
+                        "where": "?subj rdfs:label ?obj ."
+                    }
+                }
+            }
+        }
+        q, _, _ = generate_sparql_list_construct(definition, "http://test/", "123")
+        self.assertTrue("""CONSTRUCT
+{
+    ?v0 :result ?v1 .
+    ?v1 :type ?v2 .
+    ?v1 :name ?v3 .
+}
+WHERE
+{
+    {
+        SELECT DISTINCT ?v0 ?v1 ?v2 ?v3
+        WHERE
+        {
+            BIND ((subj-ns:123)  AS ?v0 )
+            {
+                ?v1 a foaf:Person .
+                ?v1 vitro:mostSpecificType ?v2 .
+                ?v1 rdfs:label ?v3 .
+            }
+        }
+    }
+}""" in q)
+
+    def test_list_where(self):
+        definition = {
+            "where": """
+                ?subj vivo:relatedBy ?pos .
+                ?pos a vivo:Position .
+                ?pos vivo:relates ?obj .
+             """,
+            "list_definition": {
+            }
+        }
+        q, _, _ = generate_sparql_list_construct(definition, "http://test/", "123")
+        self.assertTrue("""CONSTRUCT
+{
+    ?v0 :result ?v1 .
+    ?v1 :type ?v2 .
+}
+WHERE
+{
+    {
+        SELECT DISTINCT ?v0 ?v1 ?v2
+        WHERE
+        {
+            BIND ((subj-ns:123)  AS ?v0 )
+            {
+                ?v0 vivo:relatedBy ?pos .
+                ?pos a vivo:Position .
+                ?pos vivo:relates ?v1 .
+                ?v1 vitro:mostSpecificType ?v2 .
+            }
+        }
+    }
+}""" in q)
+
+    def test_list_order_by(self):
+        definition = {
+            "list_definition": {
+                "where": "?subj a foaf:Person .",
+                "fields": {
+                    "name": {
+                        "where": "?subj rdfs:label ?obj .",
+                        "order": 2,
+                        "order_asc": False
+                    },
+                    "researchArea": {
+                        "where": "?subj vivo:hasResearchArea ?obj .",
+                        "order": 1
+                    }
+                }
+            }
+        }
+        q, _, _ = generate_sparql_list_construct(definition, "http://test/", "123")
+        self.assertTrue("ORDER BY ASC(?v3) DESC(?v4)" in q)
+
+    def test_limit_and_offset(self):
+        definition = {
+            "list_definition": {
+                "where": "?subj a foaf:Person .",
+                "fields": {
+                    "name": {
+                        "where": "?subj rdfs:label ?obj ."
+                    }
+                }
+            }
+        }
+        q, _, _ = generate_sparql_list_construct(definition, "http://test/", "123", limit=5, offset=10)
+        self.assertTrue("""
+        LIMIT 6
+        OFFSET 10""" in q)
+
+    def test_select_and_count_queries(self):
+        definition = {
+            "where": """
+                        ?subj vivo:relatedBy ?obj .
+                     """,
+            "list_definition": {
+                "where": "?subj a foaf:Person .",
+                "fields": {
+                    "name": {
+                        "where": "?subj rdfs:label ?obj .",
+                        "order": 1,
+                    }
+                }
+            }
+        }
+        q, select_q, count_q = generate_sparql_list_construct(definition, "http://test/", "123", limit=5, offset=10)
+        print select_q
+        self.assertTrue("""SELECT DISTINCT ?v1
+WHERE
+{
+    BIND ((subj-ns:123)  AS ?v0 )
+    {
+        ?v0 vivo:relatedBy ?v1 .
+        ?v1 a foaf:Person .
+        ?v1 vitro:mostSpecificType ?v2 .
+        ?v1 rdfs:label ?v3 .
+    }
+}
+ORDER BY ASC(?v3)
+LIMIT 5
+OFFSET 10""" in select_q)
+
+        self.assertTrue("""SELECT (COUNT(DISTINCT ?v1) as ?count)
+WHERE
+{
+    BIND ((subj-ns:123)  AS ?v0 )
+    {
+        ?v0 vivo:relatedBy ?v1 .
+        ?v1 a foaf:Person .
+        ?v1 vitro:mostSpecificType ?v2 .
+        ?v1 rdfs:label ?v3 .
+    }
+}""" in count_q)

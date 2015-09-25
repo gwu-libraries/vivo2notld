@@ -3,7 +3,9 @@
 [![Build status](https://travis-ci.org/gwu-libraries/vivo2notld.svg)]
 
 VIVO2NotLD provides tools to convert RDF that conforms to the VIVO-ISF Ontology
-to a more simplified form encoded in JSON, XML, YAML, or other.
+to a more simplified form encoded in JSON, XML, YAML, or other.  VIVO2NotLD can
+be used to create simplified form of individuals (e.g., a person) or lists (e.g., a list of people
+with positions in a specified department).
 
 The goal of providing the simplified form is to make VIVO data more readily consumable
 by other applications.  In particular, it lowers the barrier to re-use of VIVO data by:
@@ -21,12 +23,13 @@ Try it at http://gw-orcid2vivo.wrlc.org/vivo2notld
     python vivo2notld.py -h
     usage: vivo2notld.py [-h] [--format {json,yaml,xml,nt,pretty-xml,trix}]
                          [--indent INDENT] [--file FILE] [--debug]
-                         {person,document_summary,journal_summary}
+                         [--offset OFFSET] [--limit LIMIT]
+                         {person_summary,person,document_summary,organization_summary,person_summary_with_positions_in}
                          subject_namespace subject_identifier endpoint username
                          password
 
     positional arguments:
-      {person,document_summary,journal_summary}
+      {person_summary,person,document_summary,organization_summary,person_summary_with_positions_in}
       subject_namespace     For example, http://vivo.gwu.edu/individual/
       subject_identifier    For example, n115
       endpoint              Endpoint for SPARQL Query of VIVO instance,e.g.,
@@ -42,6 +45,8 @@ Try it at http://gw-orcid2vivo.wrlc.org/vivo2notld
       --file FILE           Filepath to which to serialize.
       --debug               Also output the query, result graph, and python
                             object.
+      --offset OFFSET       Offset for lists.
+      --limit LIMIT         Limit for lists.
 
 For example:
 
@@ -54,7 +59,11 @@ For example:
                                  [--format {xml,yaml,json}] [--endpoint ENDPOINT]
                                  [--username USERNAME] [--password PASSWORD]
                                  [--namespace NAMESPACE] [--identifier IDENTIFIER]
-                                 [--definition {person,document_summary,journal_summary}]
+                                 [--list-namespace LIST_NAMESPACE]
+                                 [--list-identifier LIST_IDENTIFIER]
+                                 [--definition {person_summary,person,document_summary,organization_summary}]
+                                 [--list-definition {person_summary_with_positions_in}]
+                                 [--limit LIMIT] [--offset OFFSET]
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -71,8 +80,17 @@ For example:
                             http://vivo.mydomain.edu/individual/.
       --identifier IDENTIFIER
                             Identifier for the subject, e.g., n123.
-      --definition {person,document_summary,journal_summary}
+      --list-namespace LIST_NAMESPACE
+                            Namespace for the list subject. Default is
+                            http://vivo.mydomain.edu/individual/.
+      --list-identifier LIST_IDENTIFIER
+                            Identifier for the list subject, e.g., n123.
+      --definition {person_summary,person,document_summary,organization_summary}
                             Default is person.
+      --list-definition {person_summary_with_positions_in}
+                            Default is person_summary_with_positions_in.
+      --limit LIMIT         List limit.
+      --offset OFFSET       List offset.
 
 For example, to start:
 
@@ -80,19 +98,31 @@ For example, to start:
 
 or:
 
-    python vivo2notld_service.py --format json --endpoint http://192.168.99.100:8080/vivo/api/sparqlQuery --username vivo_root@gwu.edu --password password --namespace http://vivo.gwu.edu/individual/ --identifier n115 --debug
+    python vivo2notld_service.py --format json --endpoint http://192.168.99.100:8080/vivo/api/sparqlQuery --username vivo_root@gwu.edu --password password --namespace http://vivo.gwu.edu/individual/ --identifier n115 --list-namespace http://vivo.gwu.edu/individual/ --list-identifier n336 --limit 10  --debug
 
 The web form will now be available at http://localhost:5000/.
 
 ### Invoke using curl
 
-    curl --data "definition=person&subject_namespace=http://vivo.gwu.edu/individual/&subject_identifier=n115&format=json" http://localhost:5000/
+For an individual:
+
+    curl --data "definition=person&subject_namespace=http://vivo.gwu.edu/individual/&subject_identifier=n115&format=json&definition_type=individual" http://localhost:5000/
+
+For a list:
+
+    curl --data "definition=person_summary_with_positions_in&list_subject_namespace=http://vivo.mydomain.edu/individual/&list_subject_identifier=n3360&format=json&definition_type=list&is_limited=true&limit=10&is_offset=true&offset=2" http://localhost:5000/
+
 
 ## Tests
 
     python -m unittest discover
 
 ## Transformation process
+
+### For individuals
+
+Note that individuals can be anything, e.g., a person, document, organization, etc.
+
 1. Specify a definition that describes the simplified data structure and maps to SPARQL
     clauses.
 2. Generate a SPARQL CONSTRUCT query from the definition.
@@ -335,3 +365,186 @@ or xml:
     </publications>
     <geographicfocus>New Jersey</geographicfocus>
     </librarian>
+
+### For lists
+
+Note that:
+
+* individuals can be lists of anything with relationships to anything, e.g., persons with positions in a department.
+* lists support pagination (via offsets and limits).
+* lists support ordering.
+
+1. Specify a definition that describes the simplified data structure and maps to SPARQL
+    clauses and provide an optional limit and offset.
+2. Generate a SPARQL CONSTRUCT, SELECT, and SELECT count query from the definition.
+     * The SELECT query is used to order the list since order is not preserved in the CONSTRUCT.
+     * The SELECT count is used to provide a total count for the list (i.e., without limits and offsets).
+3. Execute the queries against a VIVO SPARQL API endpoint.
+4. Based on the order of results from SELECT query, transform the RDF graph from the CONSTRUCT into a simplified (python) data structure and add the count returned by the SELECT count query.
+5. Serialize the simplified data structure to JSON, XML, YAML, etc.
+
+Example definition:
+
+    definition = {
+        #"where" specifies how the list is selected, in this
+        #case individuals that are related to a position.
+        "where": """
+                    ?subj vivo:relatedBy ?pos .
+                    ?pos a vivo:Position .
+                    ?pos vivo:relates ?obj .
+                 """,
+        #"list_definition" specifies the results, in this
+        #case a summary for a person.
+        "list_definition": {
+            "where": "?subj a foaf:Person .",
+            "fields": {
+                "name": {
+                    "where": "?subj rdfs:label ?obj .",
+                    #"order" specifies the fields to be used
+                    #for ordering. Number the fields starting
+                    #with 1.
+                    "order": 1,
+                    #"order_asc" specifies whether the list is
+                    #ordered ascending or descending. If omitted,
+                    #the default is ascending.
+                    "order_asc": True
+                }
+            }
+        }
+    }
+    
+results in (omitting namespace declaration):
+
+    CONSTRUCT
+    {
+        ?v0 :result ?v1 .
+        ?v1 :type ?v2 .
+        ?v1 :name ?v3 .
+    }
+    WHERE
+    {
+        {
+            SELECT DISTINCT ?v0 ?v1 ?v2 ?v3
+            WHERE
+            {
+                BIND ((subj-ns:n3360)  AS ?v0 )
+                {
+                    ?v0 vivo:relatedBy ?pos .
+                    ?pos a vivo:Position .
+                    ?pos vivo:relates ?v1 .
+                    ?v1 a foaf:Person .
+                    ?v1 vitro:mostSpecificType ?v2 .
+                    ?v1 rdfs:label ?v3 .
+                }
+            }
+            ORDER BY ASC(?v3)
+            LIMIT 4
+            OFFSET 2
+        }
+    }
+    
+and 
+
+    SELECT DISTINCT ?v1
+    WHERE
+    {
+        BIND ((subj-ns:n3360)  AS ?v0 )
+        {
+            ?v0 vivo:relatedBy ?pos .
+            ?pos a vivo:Position .
+            ?pos vivo:relates ?v1 .
+            ?v1 a foaf:Person .
+            ?v1 vitro:mostSpecificType ?v2 .
+            ?v1 rdfs:label ?v3 .
+        }
+    }
+    ORDER BY ASC(?v3)
+    LIMIT 3
+    OFFSET 2
+
+and
+
+    SELECT (COUNT(DISTINCT ?v1) as ?count)
+    WHERE
+    {
+        BIND ((subj-ns:n3360)  AS ?v0 )
+        {
+            ?v0 vivo:relatedBy ?pos .
+            ?pos a vivo:Position .
+            ?pos vivo:relates ?v1 .
+            ?v1 a foaf:Person .
+            ?v1 vitro:mostSpecificType ?v2 .
+            ?v1 rdfs:label ?v3 .
+        }
+    }
+
+
+and executed against a test data source results in the following (omitting namespaces):
+
+     subj-ns:n3360 :result subj-ns:n1941,
+            subj-ns:n716,
+            <http://vivo.mydomain.edu/person-53e4096d5bf17f776300c4e2e8d237ee> .
+
+    subj-ns:n1941 :name "Kaplan, Beth "^^xsd:string ;
+        :type vivo:Librarian .
+
+    subj-ns:n716 :name "Kerchner, Dan "^^xsd:string ;
+        :type vivo:Librarian .
+
+    <http://vivo.mydomain.edu/person-53e4096d5bf17f776300c4e2e8d237ee> :name "Justin Littman" ;
+        :type vivo:Librarian .
+
+
+and transformed to the simplified data structure:
+
+    {'count': u'10', 'limit': 3, 'list': [{u'type': u'Librarian', 'uri': 'http://vivo.mydomain.edu/person-53e4096d5bf17f776300c4e2e8d237ee', u'name': u'Justin Littman'}, {u'type': u'Librarian', 'uri': 'http://vivo.mydomain.edu/individual/n1941', u'name': u'Kaplan, Beth '}, {u'type': u'Librarian', 'uri': 'http://vivo.mydomain.edu/individual/n716', u'name': u'Kerchner, Dan '}], 'offset': 2}
+
+and serialized to JSON:
+
+    {
+        "count": 10, 
+        "limit": 3, 
+        "list": [
+            {
+                "type": "Librarian", 
+                "uri": "http://vivo.mydomain.edu/person-53e4096d5bf17f776300c4e2e8d237ee", 
+                "name": "Justin Littman"
+            }, 
+            {
+                "type": "Librarian", 
+                "uri": "http://vivo.mydomain.edu/individual/n1941", 
+                "name": "Kaplan, Beth "
+            }, 
+            {
+                "type": "Librarian", 
+                "uri": "http://vivo.mydomain.edu/individual/n716", 
+                "name": "Kerchner, Dan "
+            }
+        ], 
+        "offset": 2
+    }
+
+or yaml:
+
+    count: 10
+    limit: 3
+    list:
+    - {name: Justin Littman, type: Librarian, uri: 'http://vivo.mydomain.edu/person-53e4096d5bf17f776300c4e2e8d237ee'}
+    - {name: 'Kaplan, Beth ', type: Librarian, uri: 'http://vivo.mydomain.edu/individual/n1941'}
+    - {name: 'Kerchner, Dan ', type: Librarian, uri: 'http://vivo.mydomain.edu/individual/n716'}
+    offset: 2
+    
+or xml:
+
+    <?xml version="1.0" ?>
+    <list count="10" limit="3" offset="2">
+        <librarian uri="http://vivo.mydomain.edu/person-53e4096d5bf17f776300c4e2e8d237ee">
+            <name>Justin Littman</name>
+        </librarian>
+        <librarian uri="http://vivo.mydomain.edu/individual/n1941">
+            <name>Kaplan, Beth </name>
+        </librarian>
+        <librarian uri="http://vivo.mydomain.edu/individual/n716">
+            <name>Kerchner, Dan </name>
+        </librarian>
+    </list>

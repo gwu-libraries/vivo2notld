@@ -9,7 +9,8 @@ def to_json(subj, indent=4):
 
 
 def _prettify_xml(elem, indent):
-    """Return a pretty-printed XML string for the Element.
+    """
+    Return a pretty-printed XML string for the Element.
     """
     rough_string = tostring(elem, 'utf-8')
     reparsed = minidom.parseString(rough_string)
@@ -17,7 +18,19 @@ def _prettify_xml(elem, indent):
 
 
 def _process_elem(subj, tag=None, parent_elem=None):
-    if isinstance(subj, dict):
+    if "list" in subj:
+        attrs = {
+            "count": str(subj["count"])
+        }
+        if "offset" in subj:
+            attrs["offset"] = str(subj["offset"])
+        if "limit" in subj:
+            attrs["limit"] = str(subj["limit"])
+        elem = Element("list", attrs)
+        for child_subj in subj["list"]:
+            _process_elem(child_subj, parent_elem=elem)
+        return elem
+    elif isinstance(subj, dict):
         assert subj["type"]
         assert subj["uri"]
         elem = Element(subj["type"].lower(), {"uri": subj["uri"]})
@@ -47,7 +60,6 @@ def _process_elem(subj, tag=None, parent_elem=None):
 
 
 def to_xml(subj, indent=4):
-    # top = Element(subj["type"], {"uri": subj["uri"]})
     elem = _process_elem(subj)
     return _prettify_xml(elem, indent)
 

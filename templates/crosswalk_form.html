@@ -8,10 +8,10 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
     <!-- Optional theme -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <!-- Latest compiled and minified JavaScript -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -40,29 +40,90 @@
         <pre class="pre-scrollable">{{ query }}</pre>
     {% endif %}
 
+    {% if select_query %}
+        <h2>Select query</h2>
+        <pre class="pre-scrollable">{{ select_query }}</pre>
+    {% endif %}
+
+    {% if count_query %}
+        <h2>Count query</h2>
+        <pre class="pre-scrollable">{{ count_query }}</pre>
+    {% endif %}
+
     <form class="form-horizontal" action="{{ url_for('crosswalk') }}" method="POST">
         <div class="form-group">
-            <label for="definition" class="col-sm-2 control-label">Definition:</label>
-            <div class="col-sm-4">
-                <select class="form-control" name="definition" id="definition">
-                    {% for definition_id, definition_name in definitions.items() %}
-                        <option value="{{ definition_id }}" {% if definition == definition_id %} selected {% endif %}>{{ definition_name }}</option>
-                    {% endfor %}
-                </select>
+            <div class="col-sm-offset-2">
+                <input type="radio" name="definition_type" id="definition_type1" value="individual" {% if definition_type == 'individual' %} checked {% endif %}/>
+                <label for="definition_type1" class="control-label">Individual</label>
             </div>
         </div>
+        <fieldset class="col-sm-offset-2">
+            <div class="form-group">
+                <label for="definition" class="col-sm-2 control-label">Definition:</label>
+                <div class="col-sm-4">
+                    <select class="form-control" name="definition" id="definition">
+                        {% for definition_id, definition_name in definitions.items() %}
+                            <option value="{{ definition_id }}" {% if definition == definition_id %} selected {% endif %}>{{ definition_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="subject_namespace" class="col-sm-2 control-label">Subject namespace:</label>
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" id="subject_namespace" name="subject_namespace" value="{{ subject_namespace if subject_namespace != None }}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="subject_identifier" class="col-sm-2 control-label">Subject identifier:</label>
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" id="subject_identifier" name="subject_identifier" value="{{ subject_identifier if subject_identifier != None }}">
+                </div>
+            </div>
+        </fieldset>
         <div class="form-group">
-            <label for="subject_namespace" class="col-sm-2 control-label">Subject namespace:</label>
-            <div class="col-sm-6">
-                <input type="text" class="form-control" id="subject_namespace" name="subject_namespace" value="{{ subject_namespace if subject_namespace != None }}">
+            <div class="col-sm-offset-2">
+                <input type="radio" name="definition_type" id="definition_type2" value="list" {% if definition_type == 'list' %} checked {% endif %}/>
+                <label for="definition_type1" class="control-label">List</label>
             </div>
         </div>
-        <div class="form-group">
-            <label for="subject_identifier" class="col-sm-2 control-label">Subject identifier:</label>
-            <div class="col-sm-6">
-                <input type="text" class="form-control" id="subject_identifier" name="subject_identifier" value="{{ subject_identifier if subject_identifier != None }}">
+        <fieldset class="col-sm-offset-2">
+            <div class="form-group">
+                <label for="list_definition" class="col-sm-2 control-label">Definition:</label>
+                <div class="col-sm-4">
+                    <select class="form-control" name="list_definition" id="list_definition">
+                        {% for definition_id, definition_name in list_definitions.items() %}
+                            <option value="{{ definition_id }}" {% if list_definition == definition_id %} selected {% endif %}>{{ definition_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-        </div>
+            <div class="form-group">
+                <label for="list_subject_namespace" class="col-sm-2 control-label">Subject namespace:</label>
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" id="list_subject_namespace" name="list_subject_namespace" value="{{ list_subject_namespace if list_subject_namespace != None }}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="list_subject_identifier" class="col-sm-2 control-label">Subject identifier:</label>
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" id="list_subject_identifier" name="list_subject_identifier" value="{{ list_subject_identifier if list_subject_identifier != None }}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="list_offset" class="col-sm-2 control-label"><input type="checkbox" name="is_limited" {% if is_limited %} checked {% endif %}>&nbsp;Limit:</label>
+                <div class="col-sm-2">
+                    <input type="number" class="form-control" id="list_limit" name="list_limit" value="{{ list_limit }}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="list_offset" class="col-sm-2 control-label"><input type="checkbox" name="is_offset" {% if is_offset %} checked {% endif %}>&nbsp;Offset:</label>
+                <div class="col-sm-2">
+                    <input type="number" class="form-control" id="list_offset" name="list_offset" value="{{ list_offset }}">
+                </div>
+            </div>
+        </fieldset>
+        <br />
         <div class="form-group">
             <label for="endpoint" class="col-sm-2 control-label">SPARQL Query endpoint:</label>
             <div class="col-sm-6">
