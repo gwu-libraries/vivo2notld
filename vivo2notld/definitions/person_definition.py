@@ -58,7 +58,8 @@ definition = {
                         ?vc vcard:hasURL ?vcu .
                         ?vcu a vcard:URL .
                         ?vcu vcard:url ?obj .
-                     """
+                     """,
+            "optional": True
         },
         "researchArea": {
             "where": """

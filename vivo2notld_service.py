@@ -56,7 +56,7 @@ def crosswalk_form(output=None, obj=None, graph=None, query=None, select_query=N
                            output_html=session.get("output_html", True),
                            output=output,
                            obj=obj,
-                           graph=graph.serialize(format="turtle") if graph else None,
+                           graph=graph.serialize(format="turtle").decode("utf-8") if graph else None,
                            query=query,
                            select_query=select_query,
                            count_query=count_query)
@@ -84,9 +84,16 @@ def crosswalk():
     select_q = None
     count_q = None
 
-    print request.form.get("definition_type", default_definition_type)
+    definition_type = request.form.get("definition_type")
+    if not definition_type:
+        if "definition" in request.form and "list_definition" not in request.form:
+            definition_type = "individual"
+        elif "definition" not in request.form and "list_definition" in request.form:
+            definition_type = "list"
+        else:
+            definition_type = default_definition_type
 
-    if request.form.get("definition_type", default_definition_type) == "individual":
+    if definition_type == "individual":
         o, s, g, q = execute(definitions[request.form.get("definition", default_definition)],
                              request.form.get("subject_namespace", default_subject_namespace),
                              request.form.get("subject_identifier", default_subject_identifier),
@@ -108,9 +115,10 @@ def crosswalk():
         )
 
     if "output_html" in request.form:
-        return crosswalk_form(output=o, obj=s, graph=g, query=q, select_query=select_q, count_query=count_q)
+        return crosswalk_form(output=o, obj=s, graph=g, query=q, select_query=select_q,
+                              count_query=count_q)
     else:
-        return Response(o, content_type=formats[request.form['format']])
+        return Response(o, content_type=formats[request.form.get("format", default_format)])
 
 
 if __name__ == "__main__":
@@ -121,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument("--format", default="json", choices=formats.keys(),
                         help="The format for serializing. Default is json.")
     parser.add_argument("--endpoint", dest="endpoint",
-                        help="Endpoint for SPARQL Query of VIVO instance,e.g., http://localhost/vivo/api/sparqlUpdate.")
+                        help="Endpoint for SPARQL Query of VIVO instance,e.g., http://localhost/vivo/api/sparqlQuery.")
     parser.add_argument("--username", dest="username", help="Username for VIVO root.")
     parser.add_argument("--password", dest="password",
                         help="Password for VIVO root.")
