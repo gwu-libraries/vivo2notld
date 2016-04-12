@@ -2,11 +2,15 @@ from vivo2notld.sparql_query import generate_sparql_construct, generate_sparql_l
 from vivo2notld.sparql_endpoint import query, select_query
 from vivo2notld.graph import transform as transform_graph
 from vivo2notld.serializers import to_json, to_xml, to_yaml
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def execute(definition, subject_namespace, subject_identifier, endpoint, username, password,
             serialization_format="json", indent_size=4):
     q = generate_sparql_construct(definition, subject_namespace, subject_identifier, indent_size=indent_size)
+    log.debug("Construct query: %s", q)
     g = query(endpoint, username, password, q)
     s = transform_graph(g, subject_namespace + subject_identifier)
     o = _serialize(s, serialization_format, indent_size)
@@ -17,6 +21,9 @@ def execute_list(definition, subject_namespace, subject_identifier, endpoint, us
                  serialization_format="json", indent_size=4, offset=None, limit=None):
     q, select_q, count_q = generate_sparql_list_construct(definition, subject_namespace, subject_identifier,
                                                           indent_size=indent_size, offset=offset, limit=limit)
+    log.debug("Construct query: %s", q)
+    log.debug("Select query: %s", select_q)
+    log.debug("Count query: %s", count_q)
     g = query(endpoint, username, password, q)
     select_results = select_query(endpoint, username, password, select_q)
     result_list = []

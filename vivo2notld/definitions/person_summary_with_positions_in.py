@@ -5,10 +5,9 @@ mod_person_summary_definition["fields"]["name"]["order"] = 1
 
 definition = {
     "where": """
-                ?subj obo:BFO_0000051* ?subjpart .
-                ?subjpart vivo:relatedBy ?pos .
+                ?subj vivo:relatedBy ?pos .
                 ?pos a vivo:Position .
-                ?pos vivo:relates* ?obj .
+                ?pos vivo:relates ?obj .
              """,
     "list_definition": mod_person_summary_definition
 }
