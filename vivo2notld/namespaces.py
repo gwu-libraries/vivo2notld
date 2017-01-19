@@ -22,7 +22,8 @@ default = {
     "vcard": "http://www.w3.org/2006/vcard/ns#",
     "vitro-public": "http://vitro.mannlib.cornell.edu/ns/vitro/public#",
     "vivo": "http://vivoweb.org/ontology/core#",
-    "scires": "http://vivoweb.org/ontology/scientific-research#"
+    "scires": "http://vivoweb.org/ontology/scientific-research#",
+    "local": "http://vivo.gwu.edu/ontology/local#"
 }
 
 NOTLD = Namespace("info://vivo2notld#")
